@@ -1007,6 +1007,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                 directive.name = directive.name || name;
                 directive.require = getDirectiveRequire(directive);
                 directive.restrict = directive.restrict || 'EA';
+                directive.validation = directive.validation || {};
                 directive.$$moduleName = directiveFactory.$$moduleName;
                 directives.push(directive);
               } catch (e) {
@@ -1133,7 +1134,8 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         scope: {},
         bindToController: options.bindings || {},
         restrict: 'E',
-        require: options.require
+        require: options.require,
+        validation: options.validation || {}
       };
 
       // Copy annotations (starting with $) over to the DDO
@@ -1287,9 +1289,9 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
   this.$get = [
             '$injector', '$interpolate', '$exceptionHandler', '$templateRequest', '$parse',
-            '$controller', '$rootScope', '$sce', '$animate', '$$sanitizeUri',
+            '$controller', '$rootScope', '$sce', '$animate', '$$sanitizeUri', '$log',
     function($injector,   $interpolate,   $exceptionHandler,   $templateRequest,   $parse,
-             $controller,   $rootScope,   $sce,   $animate,   $$sanitizeUri) {
+             $controller,   $rootScope,   $sce,   $animate,   $$sanitizeUri,   $log) {
 
     var SIMPLE_ATTR_NAME = /^\w/;
     var specialAttrHolder = window.document.createElement('div');
@@ -3134,6 +3136,31 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       }
     }
 
+    function checkDirectiveBindingSpec(directive, destination, scopeName) {
+      // todo: check for debug mode
+
+      var validatorFactory = directive.validation[scopeName],
+        error,
+        validate;
+
+      if (!isFunction(validatorFactory)) {
+        return;
+      }
+
+      /**
+       * Validator can throw, so application should not crash
+       */
+      try {
+        validate = $injector.invoke(validatorFactory);
+        error = validate(destination, scopeName, directive.name);
+      } catch (cacthedError) {
+        error = cacthedError;
+      }
+
+      if (error instanceof Error) {
+        $log.warn('Failed scope validation:', error.message);
+      }
+    }
 
     // Set up $watches for isolate scope and controller bindings. This process
     // only occurs for isolate scopes and new scopes with controllerAs.
@@ -3153,12 +3180,14 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           case '@':
             if (!optional && !hasOwnProperty.call(attrs, attrName)) {
               destination[scopeName] = attrs[attrName] = void 0;
+              checkDirectiveBindingSpec(directive, destination, scopeName);
             }
             attrs.$observe(attrName, function(value) {
               if (isString(value) || isBoolean(value)) {
                 var oldValue = destination[scopeName];
                 recordChanges(scopeName, value, oldValue);
                 destination[scopeName] = value;
+                checkDirectiveBindingSpec(directive, destination, scopeName);
               }
             });
             attrs.$$observers[attrName].$$scope = scope;
@@ -3172,6 +3201,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               // the value to boolean rather than a string, so we special case this situation
               destination[scopeName] = lastValue;
             }
+            checkDirectiveBindingSpec(directive, destination, scopeName); // Should it be called before SimpleChange?
             initialChanges[scopeName] = new SimpleChange(_UNINITIALIZED_VALUE, destination[scopeName]);
             break;
 
@@ -3206,6 +3236,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                   // if the parent can be assigned then do so
                   parentSet(scope, parentValue = destination[scopeName]);
                 }
+                checkDirectiveBindingSpec(directive, destination, scopeName);
               }
               return lastValue = parentValue;
             };
@@ -3228,6 +3259,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
             parentGet = $parse(attrs[attrName]);
 
             var initialValue = destination[scopeName] = parentGet(scope);
+            checkDirectiveBindingSpec(directive, destination, scopeName); // Should it be called before SimpleChange?
             initialChanges[scopeName] = new SimpleChange(_UNINITIALIZED_VALUE, destination[scopeName]);
 
             removeWatch = scope.$watch(parentGet, function parentValueWatchAction(newValue, oldValue) {
@@ -3237,6 +3269,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               }
               recordChanges(scopeName, newValue, oldValue);
               destination[scopeName] = newValue;
+              checkDirectiveBindingSpec(directive, destination, scopeName);
             }, parentGet.literal);
 
             removeWatchCollection.push(removeWatch);
@@ -3248,6 +3281,10 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
             // Don't assign noop to destination if expression is not valid
             if (parentGet === noop && optional) break;
+
+            // What should be checked here?
+            // If can't check result of the expression, because we can't be sure that the expression is idempotent.
+            // By now let just leave `&` binding
 
             destination[scopeName] = function(locals) {
               return parentGet(scope, locals);
