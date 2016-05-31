@@ -6088,7 +6088,7 @@ describe('$compile', function() {
       });
     });
 
-    describe('validation', function () {
+    describe('validation', function() {
 
       var anyValidator, truthyValidator, falsyValidator;
 
@@ -6096,7 +6096,7 @@ describe('$compile', function() {
         anyValidator = function() {};
         truthyValidator = function() {};
         falsyValidator = function() {
-          return new Error('not valid')
+          return new Error('not valid');
         };
 
         anyValidator = jasmine.createSpy('anyValidator', anyValidator).and.callThrough();
@@ -6118,20 +6118,20 @@ describe('$compile', function() {
               validation: {
                 any: anyValidator,
                 valid: truthyValidator,
-                invalid: falsyValidator,
+                invalid: falsyValidator
               }
             };
           });
         }));
 
-        it('should call validator functions', inject(function ($log) {
+        it('should call validator functions', inject(function($log) {
           element = $compile('<with-validation valid="a" invalid="b" skip="c"></with-validation>')($rootScope);
           expect(truthyValidator).toHaveBeenCalledOnce();
           expect(falsyValidator).toHaveBeenCalledOnce();
           $log.reset();
         }));
 
-        it('should call validator functions with specified values', inject(function ($log) {
+        it('should call validator functions with specified values', inject(function($log) {
           element = $compile('<with-validation valid="a" invalid="b" skip="c"></with-validation>')($rootScope);
           var scope = element.isolateScope();
           expect(truthyValidator).toHaveBeenCalledWith(scope, 'valid', 'withValidation');
@@ -6139,7 +6139,7 @@ describe('$compile', function() {
           $log.reset();
         }));
 
-        it('should call validator each time the input changes', inject(function ($log) {
+        it('should call validator each time the input changes', inject(function($log) {
           var scope = $rootScope.$new();
           scope.a = 'some_value';
 
@@ -6175,7 +6175,7 @@ describe('$compile', function() {
           });
         }));
 
-        it('should not call validator for missed optional binding', inject(function () {
+        it('should not call validator for missed optional binding', inject(function() {
           element = $compile('<with-validation></with-validation>')($rootScope);
           expect(anyValidator).not.toHaveBeenCalled();
         }));
@@ -6202,14 +6202,14 @@ describe('$compile', function() {
           });
         }));
 
-        it('should call validator functions', inject(function ($log) {
+        it('should call validator functions', inject(function($log) {
           element = $compile('<with-validation valid="a" invalid="b" skip="c"></with-validation>')($rootScope);
           expect(truthyValidator).toHaveBeenCalledOnce();
           expect(falsyValidator).toHaveBeenCalledOnce();
           $log.reset();
         }));
 
-        it('should call validator functions with specified values', inject(function ($log) {
+        it('should call validator functions with specified values', inject(function($log) {
           element = $compile('<with-validation valid="a" invalid="b" skip="c"></with-validation>')($rootScope);
           var scope = element.isolateScope();
           expect(truthyValidator).toHaveBeenCalledWith(scope, 'valid', 'withValidation');
@@ -6217,7 +6217,7 @@ describe('$compile', function() {
           $log.reset();
         }));
 
-        it('should call validator each time the input changes', inject(function ($log) {
+        it('should call validator each time the input changes', inject(function($log) {
           var scope = $rootScope.$new();
           scope.a = 'some_value';
 
@@ -6253,7 +6253,7 @@ describe('$compile', function() {
           });
         }));
 
-        it('should not call validator for missed optional binding', inject(function () {
+        it('should not call validator for missed optional binding', inject(function() {
           element = $compile('<with-validation></with-validation>')($rootScope);
           expect(anyValidator).not.toHaveBeenCalled();
         }));
@@ -6275,7 +6275,7 @@ describe('$compile', function() {
           });
         }));
 
-        it('should not call validator', inject(function () {
+        it('should not call validator', inject(function() {
           element = $compile('<with-validation any="a"></with-validation>')($rootScope);
           expect(anyValidator).not.toHaveBeenCalled();
         }));
@@ -6302,14 +6302,14 @@ describe('$compile', function() {
           });
         }));
 
-        it('should call validator functions', inject(function ($log) {
+        it('should call validator functions', inject(function($log) {
           element = $compile('<with-validation valid="a" invalid="b" skip="c" any="d"></with-validation>')($rootScope);
           expect(truthyValidator).toHaveBeenCalledOnce();
           expect(falsyValidator).toHaveBeenCalledOnce();
           $log.reset();
         }));
 
-        it('should call validator functions with specified values', inject(function ($log) {
+        it('should call validator functions with specified values', inject(function($log) {
           element = $compile('<with-validation valid="a" invalid="b" skip="c" any="d"></with-validation>')($rootScope);
           var scope = element.isolateScope();
           expect(truthyValidator).toHaveBeenCalledWith(scope, 'valid', 'withValidation');
@@ -6317,7 +6317,7 @@ describe('$compile', function() {
           $log.reset();
         }));
 
-        it('should call validator each time the binding updates', inject(function ($log) {
+        it('should call validator each time the binding updates', inject(function($log) {
           var scope = $rootScope.$new();
           scope.d = 'some_value';
           element = $compile('<with-validation valid="a" invalid="b" skip="c" any="d"></with-validation>')(scope);
@@ -6358,7 +6358,7 @@ describe('$compile', function() {
           });
         }));
 
-        it('should not call validator for missed optional binding', inject(function () {
+        it('should not call validator for missed optional binding', inject(function() {
           element = $compile('<with-validation></with-validation>')($rootScope);
           expect(anyValidator).not.toHaveBeenCalled();
         }));

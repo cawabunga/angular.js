@@ -972,7 +972,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
     return require;
   }
 
-  function processDirectiveValidation(validation) {
+  function processDirectiveValidation($injector, validation) {
 
     if (isArray(validation) || isFunction(validation)) {
         validation = $injector.invoke(validation);
@@ -1021,7 +1021,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                 directive.name = directive.name || name;
                 directive.require = getDirectiveRequire(directive);
                 directive.restrict = directive.restrict || 'EA';
-                directive.validation = processDirectiveValidation(directive.validation);
+                directive.validation = processDirectiveValidation($injector, directive.validation);
                 directive.$$moduleName = directiveFactory.$$moduleName;
                 directives.push(directive);
               } catch (e) {
@@ -1149,7 +1149,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         bindToController: options.bindings || {},
         restrict: 'E',
         require: options.require,
-        validation: processDirectiveValidation(options.validation)
+        validation: processDirectiveValidation($injector, options.validation)
       };
 
       // Copy annotations (starting with $) over to the DDO
