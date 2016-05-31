@@ -871,7 +871,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
   var EVENT_HANDLER_ATTR_REGEXP = /^(on[a-z]+|formaction)$/;
   var bindingCache = createMap();
 
-  function parseIsolateBindings(scope, directiveName, isController) {
+  function parseIsolateBindings(scope, directiveName, isController, validatation) {
     var LOCAL_REGEXP = /^\s*([@&<]|=(\*?))(\??)\s*(\w*)\s*$/;
 
     var bindings = createMap();
@@ -898,6 +898,9 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         optional: match[3] === '?',
         attrName: match[4] || scopeName
       };
+      if (hasOwnProperty.call(validatation, scopeName)) {
+        bindings[scopeName].validator = validatation[scopeName];
+      }
       if (match[4]) {
         bindingCache[definition] = bindings[scopeName];
       }
@@ -914,16 +917,16 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
     if (isObject(directive.scope)) {
       if (directive.bindToController === true) {
         bindings.bindToController = parseIsolateBindings(directive.scope,
-                                                         directiveName, true);
+                                                         directiveName, true, directive.validation);
         bindings.isolateScope = {};
       } else {
         bindings.isolateScope = parseIsolateBindings(directive.scope,
-                                                     directiveName, false);
+                                                     directiveName, false, directive.validation);
       }
     }
     if (isObject(directive.bindToController)) {
       bindings.bindToController =
-          parseIsolateBindings(directive.bindToController, directiveName, true);
+          parseIsolateBindings(directive.bindToController, directiveName, true, directive.validation);
     }
     if (isObject(bindings.bindToController)) {
       var controller = directive.controller;
@@ -969,6 +972,17 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
     return require;
   }
 
+  function processDirectiveValidation(validation) {
+
+    if (isArray(validation) || isFunction(validation)) {
+        validation = $injector.invoke(validation);
+    } else if (!isObject(validation)) {
+        validation = createMap(); // or should throw?
+    }
+
+    return validation;
+  }
+
   /**
    * @ngdoc method
    * @name $compileProvider#directive
@@ -1007,7 +1021,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                 directive.name = directive.name || name;
                 directive.require = getDirectiveRequire(directive);
                 directive.restrict = directive.restrict || 'EA';
-                directive.validation = directive.validation || {};
+                directive.validation = processDirectiveValidation(directive.validation);
                 directive.$$moduleName = directiveFactory.$$moduleName;
                 directives.push(directive);
               } catch (e) {
@@ -1135,7 +1149,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         bindToController: options.bindings || {},
         restrict: 'E',
         require: options.require,
-        validation: options.validation || {}
+        validation: processDirectiveValidation(options.validation)
       };
 
       // Copy annotations (starting with $) over to the DDO
@@ -3136,16 +3150,12 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       }
     }
 
-    function checkDirectiveBindingSpec(directive, destination, scopeName) {
+    function checkDirectiveBindingSpec(directive, destination, validator, scopeName) {
       // todo: check for debug mode
 
-      var validatorFactory, error, validate;
+      var error;
 
-      if (hasOwnProperty.call(directive.validation, scopeName)) {
-        validatorFactory = directive.validation[scopeName];
-      }
-
-      if (!isFunction(validatorFactory)) {
+      if (!isFunction(validator)) {
         return;
       }
 
@@ -3153,8 +3163,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
        * Validator can throw, so application should not crash
        */
       try {
-        validate = $injector.invoke(validatorFactory);
-        error = validate(destination, scopeName, directive.name);
+        error = validator(destination, scopeName, directive.name);
       } catch (cacthedError) {
         error = cacthedError;
       }
@@ -3174,6 +3183,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         var attrName = definition.attrName,
         optional = definition.optional,
         mode = definition.mode, // @, =, or &
+        validator = definition.validator,
         lastValue,
         parentGet, parentSet, compare, removeWatch;
 
@@ -3182,7 +3192,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           case '@':
             if (!optional && !hasOwnProperty.call(attrs, attrName)) {
               destination[scopeName] = attrs[attrName] = void 0;
-              checkDirectiveBindingSpec(directive, destination, scopeName);
+              checkDirectiveBindingSpec(directive, destination, validator, scopeName);
             }
             attrs.$observe(attrName, function(value) {
               if (isString(value) || isBoolean(value)) {
@@ -3191,7 +3201,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                 destination[scopeName] = value;
 
                 if (oldValue !== value) {
-                    checkDirectiveBindingSpec(directive, destination, scopeName);
+                    checkDirectiveBindingSpec(directive, destination, validator, scopeName);
                 }
               }
             });
@@ -3209,7 +3219,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
             // Should it be called before SimpleChange?
             if (!optional || (optional && hasOwnProperty.call(attrs, attrName))) {
-                checkDirectiveBindingSpec(directive, destination, scopeName);
+                checkDirectiveBindingSpec(directive, destination, validator, scopeName);
             }
 
             initialChanges[scopeName] = new SimpleChange(_UNINITIALIZED_VALUE, destination[scopeName]);
@@ -3236,7 +3246,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                   attrs[attrName], attrName, directive.name);
             };
             lastValue = destination[scopeName] = parentGet(scope);
-            checkDirectiveBindingSpec(directive, destination, scopeName);
+            checkDirectiveBindingSpec(directive, destination, validator, scopeName);
 
             var parentValueWatch = function parentValueWatch(parentValue) {
               if (!compare(parentValue, destination[scopeName])) {
@@ -3248,7 +3258,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                   // if the parent can be assigned then do so
                   parentSet(scope, parentValue = destination[scopeName]);
                 }
-                checkDirectiveBindingSpec(directive, destination, scopeName);
+                checkDirectiveBindingSpec(directive, destination, validator, scopeName);
               }
               return lastValue = parentValue;
             };
@@ -3271,7 +3281,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
             parentGet = $parse(attrs[attrName]);
 
             var initialValue = destination[scopeName] = parentGet(scope);
-            checkDirectiveBindingSpec(directive, destination, scopeName); // Should it be called before SimpleChange?
+            checkDirectiveBindingSpec(directive, destination, validator, scopeName); // Should it be called before SimpleChange?
             initialChanges[scopeName] = new SimpleChange(_UNINITIALIZED_VALUE, destination[scopeName]);
 
             removeWatch = scope.$watch(parentGet, function parentValueWatchAction(newValue, oldValue) {
@@ -3281,7 +3291,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               }
               recordChanges(scopeName, newValue, oldValue);
               destination[scopeName] = newValue;
-              checkDirectiveBindingSpec(directive, destination, scopeName);
+              checkDirectiveBindingSpec(directive, destination, validator, scopeName);
             }, parentGet.literal);
 
             removeWatchCollection.push(removeWatch);

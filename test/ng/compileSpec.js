@@ -6116,15 +6116,9 @@ describe('$compile', function() {
                 skip: '@'
               },
               validation: {
-                any: function () {
-                  return anyValidator;
-                },
-                valid: function() {
-                  return truthyValidator;
-                },
-                invalid: function() {
-                  return falsyValidator;
-                },
+                any: anyValidator,
+                valid: truthyValidator,
+                invalid: falsyValidator,
               }
             };
           });
@@ -6175,9 +6169,7 @@ describe('$compile', function() {
                 any: '@?'
               },
               validation: {
-                any: function() {
-                  return anyValidator;
-                }
+                any: anyValidator
               }
             };
           });
@@ -6202,15 +6194,9 @@ describe('$compile', function() {
                 any: '<'
               },
               validation: {
-                valid: function() {
-                  return truthyValidator;
-                },
-                invalid: function() {
-                  return falsyValidator;
-                },
-                any: function () {
-                  return anyValidator;
-                }
+                valid: truthyValidator,
+                invalid: falsyValidator,
+                any: anyValidator
               }
             };
           });
@@ -6261,9 +6247,7 @@ describe('$compile', function() {
                 any: '<?'
               },
               validation: {
-                any: function() {
-                  return anyValidator;
-                }
+                any: anyValidator
               }
             };
           });
@@ -6285,9 +6269,7 @@ describe('$compile', function() {
                 any: '&'
               },
               validation: {
-                any: function () {
-                  return anyValidator;
-                }
+                any: anyValidator
               }
             };
           });
@@ -6312,15 +6294,9 @@ describe('$compile', function() {
                 any: '='
               },
               validation: {
-                valid: function() {
-                  return truthyValidator;
-                },
-                invalid: function() {
-                  return falsyValidator;
-                },
-                any: function () {
-                  return anyValidator;
-                }
+                valid: truthyValidator,
+                invalid: falsyValidator,
+                any: anyValidator
               }
             };
           });
@@ -6376,9 +6352,7 @@ describe('$compile', function() {
                 any: '=?'
               },
               validation: {
-                any: function() {
-                  return anyValidator;
-                }
+                any: anyValidator
               }
             };
           });
