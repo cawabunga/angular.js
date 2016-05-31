@@ -6088,6 +6088,315 @@ describe('$compile', function() {
       });
     });
 
+    describe('validation', function () {
+
+      var anyValidator, truthyValidator, falsyValidator;
+
+      beforeEach(module(function() {
+        anyValidator = function() {};
+        truthyValidator = function() {};
+        falsyValidator = function() {
+          return new Error('not valid')
+        };
+
+        anyValidator = jasmine.createSpy('anyValidator', anyValidator).and.callThrough();
+        truthyValidator = jasmine.createSpy('truthyValidator', truthyValidator).and.callThrough();
+        falsyValidator = jasmine.createSpy('falsyValidator', falsyValidator).and.callThrough();
+      }));
+
+      describe('@-bound property', function() {
+
+        beforeEach(module(function() {
+          directive('withValidation', function() {
+            return {
+              scope: {
+                any: '@',
+                valid: '@',
+                invalid: '@',
+                skip: '@'
+              },
+              validation: {
+                any: function () {
+                  return anyValidator;
+                },
+                valid: function() {
+                  return truthyValidator;
+                },
+                invalid: function() {
+                  return falsyValidator;
+                },
+              }
+            };
+          });
+        }));
+
+        it('should call validator functions', inject(function ($log) {
+          element = $compile('<with-validation valid="a" invalid="b" skip="c"></with-validation>')($rootScope);
+          expect(truthyValidator).toHaveBeenCalledOnce();
+          expect(falsyValidator).toHaveBeenCalledOnce();
+          $log.reset();
+        }));
+
+        it('should call validator functions with specified values', inject(function ($log) {
+          element = $compile('<with-validation valid="a" invalid="b" skip="c"></with-validation>')($rootScope);
+          var scope = element.isolateScope();
+          expect(truthyValidator).toHaveBeenCalledWith(scope, 'valid', 'withValidation');
+          expect(falsyValidator).toHaveBeenCalledWith(scope, 'invalid', 'withValidation');
+          $log.reset();
+        }));
+
+        it('should call validator each time the input changes', inject(function ($log) {
+          var scope = $rootScope.$new();
+          scope.a = 'some_value';
+
+          element = $compile('<with-validation any="{{ a }}"></with-validation>')(scope);
+
+          expect(anyValidator).toHaveBeenCalledOnce();
+
+          scope.$apply();
+          expect(anyValidator).toHaveBeenCalledOnce(); // should not check same value
+
+          scope.a = 'other_value';
+          scope.$apply();
+
+          expect(anyValidator).toHaveBeenCalledTimes(2);
+
+          $log.reset();
+        }));
+
+      });
+
+      describe('optional @-bound property', function() {
+
+        beforeEach(module(function() {
+          directive('withValidation', function() {
+            return {
+              scope: {
+                any: '@?'
+              },
+              validation: {
+                any: function() {
+                  return anyValidator;
+                }
+              }
+            };
+          });
+        }));
+
+        it('should not call validator for missed optional binding', inject(function () {
+          element = $compile('<with-validation></with-validation>')($rootScope);
+          expect(anyValidator).not.toHaveBeenCalled();
+        }));
+
+      });
+
+      describe('<-bound property', function() {
+
+        beforeEach(module(function() {
+          directive('withValidation', function() {
+            return {
+              scope: {
+                valid: '<',
+                invalid: '<',
+                skip: '<',
+                any: '<'
+              },
+              validation: {
+                valid: function() {
+                  return truthyValidator;
+                },
+                invalid: function() {
+                  return falsyValidator;
+                },
+                any: function () {
+                  return anyValidator;
+                }
+              }
+            };
+          });
+        }));
+
+        it('should call validator functions', inject(function ($log) {
+          element = $compile('<with-validation valid="a" invalid="b" skip="c"></with-validation>')($rootScope);
+          expect(truthyValidator).toHaveBeenCalledOnce();
+          expect(falsyValidator).toHaveBeenCalledOnce();
+          $log.reset();
+        }));
+
+        it('should call validator functions with specified values', inject(function ($log) {
+          element = $compile('<with-validation valid="a" invalid="b" skip="c"></with-validation>')($rootScope);
+          var scope = element.isolateScope();
+          expect(truthyValidator).toHaveBeenCalledWith(scope, 'valid', 'withValidation');
+          expect(falsyValidator).toHaveBeenCalledWith(scope, 'invalid', 'withValidation');
+          $log.reset();
+        }));
+
+        it('should call validator each time the input changes', inject(function ($log) {
+          var scope = $rootScope.$new();
+          scope.a = 'some_value';
+
+          element = $compile('<with-validation any="a"></with-validation>')(scope);
+
+          expect(anyValidator).toHaveBeenCalledOnce();
+
+          scope.$apply();
+          expect(anyValidator).toHaveBeenCalledOnce(); // should not check same value
+
+          scope.a = 'other_value';
+          scope.$apply();
+
+          expect(anyValidator).toHaveBeenCalledTimes(2);
+
+          $log.reset();
+        }));
+
+      });
+
+      describe('optional <-bound property', function() {
+
+        beforeEach(module(function() {
+          directive('withValidation', function() {
+            return {
+              scope: {
+                any: '<?'
+              },
+              validation: {
+                any: function() {
+                  return anyValidator;
+                }
+              }
+            };
+          });
+        }));
+
+        it('should not call validator for missed optional binding', inject(function () {
+          element = $compile('<with-validation></with-validation>')($rootScope);
+          expect(anyValidator).not.toHaveBeenCalled();
+        }));
+
+      });
+
+      describe('&-bound property', function() {
+
+        beforeEach(module(function() {
+          directive('withValidation', function() {
+            return {
+              scope: {
+                any: '&'
+              },
+              validation: {
+                any: function () {
+                  return anyValidator;
+                }
+              }
+            };
+          });
+        }));
+
+        it('should not call validator', inject(function () {
+          element = $compile('<with-validation any="a"></with-validation>')($rootScope);
+          expect(anyValidator).not.toHaveBeenCalled();
+        }));
+
+      });
+
+      describe('=-bound property', function() {
+
+        beforeEach(module(function() {
+          directive('withValidation', function() {
+            return {
+              scope: {
+                valid: '=',
+                invalid: '=',
+                skip: '=',
+                any: '='
+              },
+              validation: {
+                valid: function() {
+                  return truthyValidator;
+                },
+                invalid: function() {
+                  return falsyValidator;
+                },
+                any: function () {
+                  return anyValidator;
+                }
+              }
+            };
+          });
+        }));
+
+        it('should call validator functions', inject(function ($log) {
+          element = $compile('<with-validation valid="a" invalid="b" skip="c" any="d"></with-validation>')($rootScope);
+          expect(truthyValidator).toHaveBeenCalledOnce();
+          expect(falsyValidator).toHaveBeenCalledOnce();
+          $log.reset();
+        }));
+
+        it('should call validator functions with specified values', inject(function ($log) {
+          element = $compile('<with-validation valid="a" invalid="b" skip="c" any="d"></with-validation>')($rootScope);
+          var scope = element.isolateScope();
+          expect(truthyValidator).toHaveBeenCalledWith(scope, 'valid', 'withValidation');
+          expect(falsyValidator).toHaveBeenCalledWith(scope, 'invalid', 'withValidation');
+          $log.reset();
+        }));
+
+        it('should call validator each time the binding updates', inject(function ($log) {
+          var scope = $rootScope.$new();
+          scope.d = 'some_value';
+          element = $compile('<with-validation valid="a" invalid="b" skip="c" any="d"></with-validation>')(scope);
+          var isolateScope = element.isolateScope();
+
+          expect(anyValidator).toHaveBeenCalledOnce();
+
+          scope.$apply();
+          expect(anyValidator).toHaveBeenCalledOnce(); // should not check same value
+
+          // Update from the outside
+          scope.d = 'other_value';
+          scope.$apply();
+          expect(anyValidator).toHaveBeenCalledTimes(2);
+
+          // Update from the inside
+          isolateScope.any = 'another_value';
+          isolateScope.$apply();
+          expect(anyValidator).toHaveBeenCalledTimes(3);
+
+          $log.reset();
+        }));
+
+      });
+
+      describe('optional =-bound property', function() {
+
+        beforeEach(module(function() {
+          directive('withValidation', function() {
+            return {
+              scope: {
+                any: '=?'
+              },
+              validation: {
+                any: function() {
+                  return anyValidator;
+                }
+              }
+            };
+          });
+        }));
+
+        it('should not call validator for missed optional binding', inject(function () {
+          element = $compile('<with-validation></with-validation>')($rootScope);
+          expect(anyValidator).not.toHaveBeenCalled();
+        }));
+
+      });
+
+      // todo: add tests for DI-injecting
+
+      // todo: add tests for logging error message
+
+    });
+
   });
 
 

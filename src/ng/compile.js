@@ -3139,9 +3139,11 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
     function checkDirectiveBindingSpec(directive, destination, scopeName) {
       // todo: check for debug mode
 
-      var validatorFactory = directive.validation[scopeName],
-        error,
-        validate;
+      var validatorFactory, error, validate;
+
+      if (hasOwnProperty.call(directive.validation, scopeName)) {
+        validatorFactory = directive.validation[scopeName];
+      }
 
       if (!isFunction(validatorFactory)) {
         return;
@@ -3187,7 +3189,10 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                 var oldValue = destination[scopeName];
                 recordChanges(scopeName, value, oldValue);
                 destination[scopeName] = value;
-                checkDirectiveBindingSpec(directive, destination, scopeName);
+
+                if (oldValue !== value) {
+                    checkDirectiveBindingSpec(directive, destination, scopeName);
+                }
               }
             });
             attrs.$$observers[attrName].$$scope = scope;
@@ -3201,7 +3206,12 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               // the value to boolean rather than a string, so we special case this situation
               destination[scopeName] = lastValue;
             }
-            checkDirectiveBindingSpec(directive, destination, scopeName); // Should it be called before SimpleChange?
+
+            // Should it be called before SimpleChange?
+            if (!optional || (optional && hasOwnProperty.call(attrs, attrName))) {
+                checkDirectiveBindingSpec(directive, destination, scopeName);
+            }
+
             initialChanges[scopeName] = new SimpleChange(_UNINITIALIZED_VALUE, destination[scopeName]);
             break;
 
@@ -3226,6 +3236,8 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                   attrs[attrName], attrName, directive.name);
             };
             lastValue = destination[scopeName] = parentGet(scope);
+            checkDirectiveBindingSpec(directive, destination, scopeName);
+
             var parentValueWatch = function parentValueWatch(parentValue) {
               if (!compare(parentValue, destination[scopeName])) {
                 // we are out of sync and need to copy
